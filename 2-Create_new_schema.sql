@@ -47,8 +47,10 @@ CREATE TABLE "comments" (
   "comment_date" TIMESTAMP WITH TIME ZONE,
   "text_content" TEXT NOT NULL,
   "parent_id" INTEGER DEFAULT NULL,
-  FOREIGN KEY ("parent_id") REFERENCES "comments" ON DELETE CASCADE
+  "level" INTEGER DEFAULT 1,
+  FOREIGN KEY ("parent_id") REFERENCES "comments" ON DELETE CASCADE,
   -- allows the thread system.
+  CHECK ("level">=1)
 );
 CREATE INDEX "find_parent_or_its_child_comment"
 ON "comments" ("parent_id"); -- 2.i and 2.j

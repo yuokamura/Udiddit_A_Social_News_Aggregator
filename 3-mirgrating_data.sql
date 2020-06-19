@@ -5,31 +5,31 @@ INSERT INTO "users" ("username")
   FROM "bad_posts";  -- users who have made posts
 
 INSERT INTO "users" ("username")
-  SELECT DISTINCT "username"
-  FROM "bad_comments"
-  WHERE "username" NOT IN (
-    SELECT "username"
-    FROM "bad_posts"); -- users who have made comment only
+  SELECT DISTINCT bp."username"
+  FROM "bad_comments" bp
+    LEFT JOIN "users" u
+    ON    bp."username" = u."username"
+    WHERE u."username" IS NULL; -- users who have made not made a post
 
 INSERT INTO "users" ("username")
-  SELECT  DISTINCT tab1."upvote_user"
-  FROM    (
-          SELECT REGEXP_SPLIT_TO_TABLE("upvotes",',') AS "upvote_user"
-          FROM  "bad_posts"
-          ) AS tab1
-  WHERE   tab1."upvote_user" NOT IN (
-            SELECT "username"
-            FROM   "users"); -- users who have only upvoted
+  SELECT DISTINCT tab1."upvote_user"
+  FROM  (
+        SELECT REGEXP_SPLIT_TO_TABLE("upvotes",',') AS "upvote_user"
+        FROM  "bad_posts"
+        ) AS tab1
+  LEFT JOIN "users" u
+  ON     tab1."upvote_user" = u."username"
+  WHERE  u."username" IS NULL; -- users who have only upvoted
 
 INSERT INTO "users" ("username")
-  SELECT  DISTINCT tab1."downvote_user"
-  FROM    (
-          SELECT REGEXP_SPLIT_TO_TABLE("downvotes",',') AS "downvote_user"
-          FROM  "bad_posts"
-          ) AS tab1
-  WHERE   tab1."downvote_user" NOT IN (
-            SELECT "username"
-            FROM   "users"); -- users who have only downvoted
+  SELECT DISTINCT tab1."downvote_user"
+  FROM  (
+        SELECT REGEXP_SPLIT_TO_TABLE("downvotes",',') AS "downvote_user"
+        FROM  "bad_posts"
+        ) AS tab1
+  LEFT JOIN "users" u
+  ON     tab1."downvote_user" = u."username"
+  WHERE  u."username" IS NULL; --users who have only downvoted
 
 
 /* migrate all the topics and respective users */
@@ -44,7 +44,7 @@ INSERT INTO "posts"
   SELECT  bp."id",
           t."id",
           u."id",
-          bp."title",
+          LEFT(bp."title",100), -- limit title to 100 character max
           bp."url",
           bp."text_content"
   FROM    "bad_posts" bp
@@ -52,8 +52,6 @@ INSERT INTO "posts"
     ON    bp."topic" = t."name"
     JOIN  "users" u
     ON    bp."username" = u."username"
-  WHERE   LENGTH(bp."title")<=100;
-  -- post with title longer than limited did not get migrated.
 
 
 /* migrate comments from bad_comments */
@@ -80,7 +78,6 @@ INSERT INTO "votes"
           SELECT  "id" AS post_id,
                   REGEXP_SPLIT_TO_TABLE(bp."upvotes",',') AS upvote_user
           FROM    "bad_posts" bp
-          WHERE   LENGTH(bp."title")<=100
           ) AS tab1
   JOIN  users u
   ON    tab1.upvote_user = u."username";
@@ -95,7 +92,6 @@ INSERT INTO "votes"
           SELECT  "id" AS post_id,
                   REGEXP_SPLIT_TO_TABLE(bp."downvotes",',') AS downvote_user
           FROM    "bad_posts" bp
-          WHERE   LENGTH(bp."title")<=100
           ) AS tab1
   JOIN  users u
   ON    tab1.downvote_user = u."username";
